@@ -1,3 +1,7 @@
 black
+matplotlib
 mypy
+numpy
+pandas
 pytest
+seaborn

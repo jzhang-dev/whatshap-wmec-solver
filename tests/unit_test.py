@@ -85,3 +85,19 @@ def test_cost():
     weights = [[3, 3, 3], [3, 3, 3], [3, 3, 2.9]]  # float weights are silently rounded down
     result = wMECSolver(allele_matrix, weights).solve()
     assert result.cost == 2
+
+
+def test_argsort_reads():
+    reads = [(-1, 1, 0), (1, 0, -1), (-1, -1, 0)]
+    assert wMECSolver._argsort_reads(reads) == [1, 0, 2]
+
+def test_sort_reads():
+    allele_matrix = [[-1, 1, 0], [1, 0, 1], [0, 1, 0]]
+    weights = [[1, 1, 1], [1, 2, 1], [2, 2, 2]]
+    solver = wMECSolver(allele_matrix, weights)
+    assert solver._index_mapping == {0: 2, 1: 0, 2: 1}
+    result = solver.solve()
+    haplotypes = result.haplotypes
+    assert set(haplotypes) == {(1, 0, 1), (0, 1, 0)}
+    partition = result.partition
+    assert partition[0] == partition[2] and partition[1] != partition[2]
