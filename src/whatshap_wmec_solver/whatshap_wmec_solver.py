@@ -12,11 +12,13 @@ from whatshap.testhelpers import canonic_index_to_biallelic_gt
 # Type aliases
 Matrix2D = Sequence[Sequence[int]]
 
+
 @dataclass
 class wMECSolverResult:
     haplotypes: tuple[Sequence[int], Sequence[int]]
     partition: Sequence[int]
     cost: float
+
 
 class wMECSolver:
     def __init__(self, readset):
@@ -49,13 +51,12 @@ class wMECSolver:
     #         matrix.append(row)
     #     return cls.from_matrix(matrix)
 
-
-    def compute_haplotypes(self, all_heterozygous=False) -> wMECSolverResult:
+    def compute_haplotypes(self, allow_homozygousity:bool=True) -> wMECSolverResult:
         positions = self._readset.get_positions()
         recombcost = [1] * len(positions)
         pedigree = wh.Pedigree(wh.NumericSampleIds())
         genotype_likelihoods = [
-            None if all_heterozygous else wh.PhredGenotypeLikelihoods([0, 0, 0])
+            None if not allow_homozygousity else wh.PhredGenotypeLikelihoods([0, 0, 0])
         ] * len(positions)
         pedigree.add_individual(
             "individual0",
@@ -64,7 +65,7 @@ class wMECSolver:
         )
 
         dp_table = wh.PedigreeDPTable(
-            self._readset, recombcost, pedigree, distrust_genotypes=not all_heterozygous
+            self._readset, recombcost, pedigree, distrust_genotypes=allow_homozygousity
         )
 
         superreads, transmission_vector = dp_table.get_super_reads()
@@ -72,8 +73,8 @@ class wMECSolver:
 
         cost = dp_table.get_optimal_cost()
         partition = dp_table.get_optimal_partitioning()
-        hap1:list[int] = [v.allele for v in superreads[0][0]]
-        hap2:list[int]  = [v.allele for v in superreads[0][1]]
+        hap1: list[int] = [v.allele for v in superreads[0][0]]
+        hap2: list[int] = [v.allele for v in superreads[0][1]]
 
         # Represent ambiguous values with -1 instead of 3
         hap1 = [x if x != 3 else -1 for x in hap1]
@@ -82,14 +83,14 @@ class wMECSolver:
         return wMECSolverResult(haplotypes=(hap1, hap2), partition=partition, cost=cost)
 
 
-
-
 def solve_wMEC(
     allele_matrix: Matrix2D,
     weights: Matrix2D | None = None,
+    *,
+    allow_homozygousity=True,
 ) -> tuple[Sequence[int], Sequence[int]]:
     solver = wMECSolver.from_matrix(allele_matrix, weights=weights)
-    result = solver.compute_haplotypes()
+    result = solver.compute_haplotypes(allow_homozygousity=allow_homozygousity)
     haplotype_1, haplotype_2 = result.haplotypes
     if haplotype_1 > haplotype_2:
         haplotype_1, haplotype_2 = haplotype_2, haplotype_1

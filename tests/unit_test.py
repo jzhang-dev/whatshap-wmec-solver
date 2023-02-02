@@ -38,3 +38,13 @@ def test_reads_with_holes():
 def test_multiple_phase_blocks():
     allele_matrix = [[0, 1, -1, -1], [1, 0, -1, -1], [-1, -1, 1, 0], [-1, -1, 0, 1]]
     assert solve_wMEC(allele_matrix) == ([0, 1, 1, 0], [1, 0, 0, 1])
+
+
+def test_allow_homozygous():
+    allele_matrix = [[0, 1, 1], [0, 1, 1], [1, 0, 1]]
+    assert solve_wMEC(allele_matrix, allow_homozygousity=True) == ([0, 1, 1], [1, 0, 1])
+    assert solve_wMEC(allele_matrix, allow_homozygousity=False) == ([0, 1, 1], [1, 0, 0])
+
+    allele_matrix = [[0, 1, 1], [0, 1, 1]]
+    assert solve_wMEC(allele_matrix, allow_homozygousity=True) == ([-1, -1, -1], [0, 1, 1])
+    assert solve_wMEC(allele_matrix, allow_homozygousity=False) == ([0, 1, 1], [1, 0, 0])
