@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "whatshap_wmec_solver"
+description = "A Python wrapper around WhatsHap to solve abstract weighted minimum error correction (wMEC) problems."
+readme = "README.md"
+version = "0.1.0"
+requires-python = ">=3.10"
+keywords = ["bioinformatics", "genomics"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "numpy >= 1.24.1",
+    "whatshap == 1.7",
+]
