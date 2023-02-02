@@ -4,29 +4,25 @@
 from __future__ import annotations
 from typing import Sequence
 from dataclasses import dataclass
-import numpy as np
 import whatshap.core as wh
 from whatshap.testhelpers import canonic_index_to_biallelic_gt
 
 
 # Type aliases
-Matrix2D = Sequence[Sequence[int]]
+AlleleMatrix = Sequence[Sequence[int]]
+WeightMatrix = Sequence[Sequence[float]]
 
 
 @dataclass
-class wMECSolverResult:
+class _wMECSolverResult:
     haplotypes: tuple[Sequence[int], Sequence[int]]
     partition: Sequence[int]
     cost: float
 
 
 class wMECSolver:
-    def __init__(self, readset):
-        self._readset = readset
-
-    @classmethod
-    def from_matrix(cls, matrix: Matrix2D, weights: Matrix2D | None = None):
-        rs = wh.ReadSet()
+    def __init__(self, matrix: AlleleMatrix, weights: WeightMatrix | None = None):
+        readset = wh.ReadSet()
         mapping_quality = 50
         source_id = 0
         for i, row in enumerate(matrix):
@@ -40,18 +36,10 @@ class wMECSolver:
                 position = (j + 1) * 10  # Not sure why. See testhelpers.py:28
                 w = weights[i][j] if weights else 1
                 read.add_variant(position, allele, w)
-            rs.add(read)
-        return cls(rs)
+            readset.add(read)
+        self._readset = readset
 
-    # @classmethod
-    # def from_matrix_file(cls, matrix_file_handle):
-    #     matrix = []
-    #     for line in matrix_file_handle:
-    #         row = [int(c) if c.isdigit() else -1 for c in line]
-    #         matrix.append(row)
-    #     return cls.from_matrix(matrix)
-
-    def compute_haplotypes(self, allow_homozygousity:bool=True) -> wMECSolverResult:
+    def solve(self, allow_homozygousity: bool = True) -> _wMECSolverResult:
         positions = self._readset.get_positions()
         recombcost = [1] * len(positions)
         pedigree = wh.Pedigree(wh.NumericSampleIds())
@@ -80,18 +68,18 @@ class wMECSolver:
         hap1 = [x if x != 3 else -1 for x in hap1]
         hap2 = [x if x != 3 else -1 for x in hap2]
 
-        return wMECSolverResult(haplotypes=(hap1, hap2), partition=partition, cost=cost)
+        return _wMECSolverResult(
+            haplotypes=(tuple(hap1), tuple(hap2)), partition=tuple(partition), cost=cost
+        )
 
 
 def solve_wMEC(
-    allele_matrix: Matrix2D,
-    weights: Matrix2D | None = None,
+    allele_matrix: AlleleMatrix,
+    weights: WeightMatrix | None = None,
     *,
     allow_homozygousity=True,
 ) -> tuple[Sequence[int], Sequence[int]]:
-    solver = wMECSolver.from_matrix(allele_matrix, weights=weights)
-    result = solver.compute_haplotypes(allow_homozygousity=allow_homozygousity)
+    solver = wMECSolver(allele_matrix, weights=weights)
+    result = solver.solve(allow_homozygousity=allow_homozygousity)
     haplotype_1, haplotype_2 = result.haplotypes
-    if haplotype_1 > haplotype_2:
-        haplotype_1, haplotype_2 = haplotype_2, haplotype_1
     return haplotype_1, haplotype_2
